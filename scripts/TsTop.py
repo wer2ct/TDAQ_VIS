@@ -7,5 +7,5 @@ with ldmx_ts_data.DataRoot() as root:
     pyrogue.pydm.runPyDM(
         serverList=root.zmqServer.address,
         title='Warm TDM',
-        sizeX=2000,
-        sizeY=2000)
+        sizeX=500,
+        sizeY=500)

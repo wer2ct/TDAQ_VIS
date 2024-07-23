@@ -20,6 +20,7 @@ class DataRoot(pr.Root):
         self.add(pr.RunControl(
             cmd = self.PrbsTx.genFrame,
             rates = {
+                0.1: '0.1 Hz',
                 1: '1 Hz',
                 10: '10 Hz',
                 100: '100 Hz',

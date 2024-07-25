@@ -34,9 +34,9 @@ class TsDaqDataReceiver(pr.DataReceiver):
         self.nframes = 0
 
         #linearization encoding
-        self.nbins_ = [0,16,36,57,64]
-        self.edges_ = [0,34,158,419,517,915,1910,3990,4780,7960,15900,32600,38900,64300,128000,261000,350000]
-        self.sense_ = [3,6,12,25,25,50,99,198,198,397,794,1587,1578,3174,6349,12700]
+        self.nbins=[0,16, 36, 57, 64]
+        self.edges=[0,34,158,419,517,915,1910,3990,4780,7960,15900,32600,38900, 64300, 128000, 261000, 350000]
+        self.sense=[3,6,12,25, 25, 50, 99, 198,198, 397, 794, 1587, 1587, 3174, 6349, 12700]
         
         self.add(pr.LocalVariable(
             name = "Receiving",
@@ -49,22 +49,86 @@ class TsDaqDataReceiver(pr.DataReceiver):
             description = "PE data for histogram"
         ))
         self.add(pr.LocalVariable(
+            name = "EvtCount",
+            value = 0,
+            description = "Counts the event. Current stand in for broken timing"
+        ))
+        self.add(pr.LocalVariable(
             name = "ChannelBins",
             value = np.arange(0,12),
             description = "Channel Bins"
         ))
         self.add(pr.LocalVariable(
-            name = "Channel",
-            value = 0,
-            description = "Which channel is reading out data in this frame"
+            name = "AvgPE",
+            value = 0.,
+            description = "PE averaged over activate channels"
         ))
         self.add(pr.LocalVariable(
-            name = "chargePE",
-            value = 0.0,
-            description = "What is the PE of the channel being read (over 6 clock cycles)",
+            name = "ChannelActive",
+            value = 0,
         ))
-            
-
+        #Active Channel Variables -> Default Zero
+        self.add(pr.LocalVariable(
+            name = "Chnl0",
+            value = 0,
+            description = "Is Chn0 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl1",
+            value = 0,
+            description = "Is Chn1 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl2",
+            value = 0,
+            description = "Is Chn2 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl3",
+            value = 0,
+            description = "Is Chn3 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl4",
+            value = 0,
+            description = "Is Chn4 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl5",
+            value = 0,
+            description = "Is Chn5 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl6",
+            value = 0,
+            description = "Is Chn6 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl7",
+            value = 0,
+            description = "Is Chn7 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl8",
+            value = 0,
+            description = "Is Chn8 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl9",
+            value = 0,
+            description = "Is Chn9 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl10",
+            value = 0,
+            description = "Is Chn10 active?"
+        ))
+        self.add(pr.LocalVariable(
+            name = "Chnl11",
+            value = 0,
+            description = "Is Chn11 active?"
+        ))
+   
 
     #Utility Functions#
     def rand_line(self): #input TestVec file, output random line from TestVec as np array, channel is first entry
@@ -83,18 +147,22 @@ class TsDaqDataReceiver(pr.DataReceiver):
         return(ADC_b + TDC_b)
               
     def linearization(self,w): #input word, output PE
-        #print(w)
-        ADC = w.shift_right(6)
-        #print(ADC)
-        rr = int(ADC) // 64 
-        v1 = int(ADC) % 64 
-        ss = 1*(v1>self.nbins_[1]) + 1*(v1>self.nbins_[2]) + 1*(v1>self.nbins_[3])
-        charge = (self.edges_[4*rr+ss]) + ((v1-self.nbins_[ss])*self.sense_[4*rr+ss]) + (self.sense_[4*rr+ss]/2) - 1
-        return((charge)*0.00625)
-    
+        
+        #Linearization script is Rory's, I am still not 100% confident it is functioning properly, but better than nothing for now 
+        adc_b = w.shift_right(6)
+        adc = int(adc_b)
+        rr=adc//64
+        v1=adc%64
+        ss=(v1>self.nbins[1])+(v1>self.nbins[2])+(v1>self.nbins[3])
+        charge=self.edges[4*rr+ss]+(v1-self.nbins[ss])*self.sense[4*rr+ss]+self.sense[4*rr+ss]/2-1
+        return ((charge-36)*.00625*1.1556136857680435)
+            
     #Process, define function to be run everytime a new frame is received#
     def process(self,frame):
+        self.EvtCount += 1
         self.Receiving.set(1)
+    
+        #Pulling random data from TestVec
         n_channels_active = random.randint(1,5)
         event_total = 0.0
         channel_array = np.zeros([12])
@@ -102,52 +170,115 @@ class TsDaqDataReceiver(pr.DataReceiver):
             data_entry = self.rand_line()
             chnl_num = int(data_entry[0])
             chnl_total = 0.0
-            for i in range(1,6):
+            for i in range(1,5):
                 conc = self.ADC_plus_TDC(int(data_entry[i]),int(data_entry[i+6]))
                 chrg = self.linearization(conc)
                 chnl_total += round(chrg,4)
             #print(f'{self.Channel.get()} -> {chnl_total}')
             channel_array[chnl_num] = chnl_total
-
+        
+        #Setting Rogue Variables
+        print(channel_array)
         event_total = np.sum(channel_array)
+        avgPE = round(np.average(channel_array),4)
         self.ChnlData.set(channel_array)
-        print(self.ChnlData.get())
-        
-        
-            
-        
+        self.AvgPE.set(avgPE)
+        print(self.AvgPE.get())
+        #print(self.ChnlData.get())
 
+        #Setting Channel Rogue Variables
+        actives = np.nonzero(channel_array)
+        self.ChannelActive.set(np.count_nonzero(channel_array))
+        print(actives)
 
+        #Channel 0
+        if np.isin(0, actives):
+            self.Chnl0.set(1)
+        else:
+            self.Chnl0.set(0)
             
-        """    
-        charge = self.linearization(self.ADC_plus_TDC(150,62))
-        print(charge)
-        testADC = ([64,148,145,128,109,95])
-        testTDC = ([8,62,62,62,62,62])
-        for i in range(6):
-            conc = self.ADC_plus_TDC(testADC[i],testTDC[i])
-            chrg = self.linearization(conc)
-            print(chrg)
-            total += chrg
-        print(f'total->{total}')
-        #print(f'diff->{expected-total}\n')
+        #Channel 1
+        if np.isin(1, actives):
+            self.Chnl1.set(1)
+        else:
+            self.Chnl1.set(0)
+            
+        #Channel 2
+        if np.isin(2, actives):
+            self.Chnl2.set(1)
+        else:
+            self.Chnl2.set(0)
+            
+        #Channel 3
+        if np.isin(3, actives):
+            self.Chnl3.set(1)
+        else:
+            self.Chnl3.set(0)
+            
+        #Channel 4
+        if np.isin(4, actives):
+            self.Chnl4.set(1)
+        else:
+            self.Chnl4.set(0)
+            
+        #Channel 5
+        if np.isin(5, actives):
+            self.Chnl5.set(1)
+        else:
+            self.Chnl0.set(0)
+            
+        #Channel 6
+        if np.isin(6, actives):
+            self.Chnl6.set(1)
+        else:
+            self.Chnl6.set(0)
+            
+        #Channel 7
+        if np.isin(7, actives):
+            self.Chnl7.set(1)
+        else:
+            self.Chnl7.set(0)
+            
+        #Channel 8
+        if np.isin(8, actives):
+            self.Chnl8.set(1)
+        else:
+            self.Chnl8.set(0)
+            
+        #Channel 9
+        if np.isin(9, actives):
+            self.Chnl9.set(1)
+        else:
+            self.Chnl9.set(0)
+            
+        #Channel 10
+        if np.isin(10, actives):
+            self.Chnl10.set(1)
+        else:
+            self.Chnl10.set(0)
+            
+        #Channel 11
+        if np.isin(11, actives):
+            self.Chnl11.set(1)
+        else:
+            self.Chnl11.set(0)
+
+        
         """
-        
-        
-        
-        
-        
-        
-            
-            
-        
-       
-            
-            
-            
-        
-        
-        
-        
-        
-        
+        Sample ADC and TDC with expected
+
+        adcs=[95,148,145,128,109,64] #191.037 (broken)
+        tdcs=[8,62,62,62,62,62]
+        adcs2=[150,145,128,109,95,81] #192.714
+        tdcs2=[62,62,62,62,62,62]
+        adcs3=[144,136,119,103,87,73] #148.053
+        tdcs3=[62,62,62,62,62,62]
+        adcs4=[151,145,129,110,96,81] #197.693
+        tdcs4=[62,62,62,62,62,62]
+        adcs5=[154,148,132,113,100,84] #221.214
+        tdcs5=[62,62,62,62,62,62]
+        adcs6=[73,159,154,139,121,104] #273.48
+        tdcs6=[8,62,62,62,62,62]
+        adcs7=[159,152,137,119,103,88] #258.495
+        tdcs7=[62,62,62,62,62,62]
+        """

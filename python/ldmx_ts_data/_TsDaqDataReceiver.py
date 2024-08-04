@@ -5,7 +5,7 @@ Author: Kieran Wall (University of Virginia) -> wer2ct@virginia.edu
 
 Created: 7/15/2024
 
-Last Modified: 7/16/2024
+Last Modified: 8/2/2024
 
 Description: Shell/outline of data receiver for LDMX Trigger Scintillator live visualization. Takes ADC/TDC data-frame (to be constructed) from FPGA and constructs pydm variables for use in GUI.
 
@@ -21,6 +21,8 @@ import sys
 import collections as cols
 import time
 import BitVector as bv
+
+
 
 #Data Receiver Class Initialization
 class TsDaqDataReceiver(pr.DataReceiver):
@@ -68,67 +70,13 @@ class TsDaqDataReceiver(pr.DataReceiver):
             value = 0,
         ))
         #Active Channel Variables -> Default Zero
-        self.add(pr.LocalVariable(
-            name = "Chnl0",
-            value = 0,
-            description = "Is Chn0 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl1",
-            value = 0,
-            description = "Is Chn1 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl2",
-            value = 0,
-            description = "Is Chn2 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl3",
-            value = 0,
-            description = "Is Chn3 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl4",
-            value = 0,
-            description = "Is Chn4 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl5",
-            value = 0,
-            description = "Is Chn5 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl6",
-            value = 0,
-            description = "Is Chn6 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl7",
-            value = 0,
-            description = "Is Chn7 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl8",
-            value = 0,
-            description = "Is Chn8 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl9",
-            value = 0,
-            description = "Is Chn9 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl10",
-            value = 0,
-            description = "Is Chn10 active?"
-        ))
-        self.add(pr.LocalVariable(
-            name = "Chnl11",
-            value = 0,
-            description = "Is Chn11 active?"
-        ))
-   
+        for i in range(12):
+            self.add(pr.LocalVariable(
+                name = f'Chnl[{i}]',
+                value = 0))
+            self.add(pr.LocalVariable(
+                name = f'ChnlVal[{i}]',
+                value = 0.))
 
     #Utility Functions#
     def rand_line(self): #input TestVec file, output random line from TestVec as np array, channel is first entry
@@ -183,87 +131,21 @@ class TsDaqDataReceiver(pr.DataReceiver):
         avgPE = round(np.average(channel_array),4)
         self.ChnlData.set(channel_array)
         self.AvgPE.set(avgPE)
-        print(self.AvgPE.get())
+        #print(self.AvgPE.get())
         #print(self.ChnlData.get())
 
         #Setting Channel Rogue Variables
         actives = np.nonzero(channel_array)
         self.ChannelActive.set(np.count_nonzero(channel_array))
-        print(actives)
+        #print(actives)
 
-        #Channel 0
-        if np.isin(0, actives):
-            self.Chnl0.set(1)
-        else:
-            self.Chnl0.set(0)
-            
-        #Channel 1
-        if np.isin(1, actives):
-            self.Chnl1.set(1)
-        else:
-            self.Chnl1.set(0)
-            
-        #Channel 2
-        if np.isin(2, actives):
-            self.Chnl2.set(1)
-        else:
-            self.Chnl2.set(0)
-            
-        #Channel 3
-        if np.isin(3, actives):
-            self.Chnl3.set(1)
-        else:
-            self.Chnl3.set(0)
-            
-        #Channel 4
-        if np.isin(4, actives):
-            self.Chnl4.set(1)
-        else:
-            self.Chnl4.set(0)
-            
-        #Channel 5
-        if np.isin(5, actives):
-            self.Chnl5.set(1)
-        else:
-            self.Chnl0.set(0)
-            
-        #Channel 6
-        if np.isin(6, actives):
-            self.Chnl6.set(1)
-        else:
-            self.Chnl6.set(0)
-            
-        #Channel 7
-        if np.isin(7, actives):
-            self.Chnl7.set(1)
-        else:
-            self.Chnl7.set(0)
-            
-        #Channel 8
-        if np.isin(8, actives):
-            self.Chnl8.set(1)
-        else:
-            self.Chnl8.set(0)
-            
-        #Channel 9
-        if np.isin(9, actives):
-            self.Chnl9.set(1)
-        else:
-            self.Chnl9.set(0)
-            
-        #Channel 10
-        if np.isin(10, actives):
-            self.Chnl10.set(1)
-        else:
-            self.Chnl10.set(0)
-            
-        #Channel 11
-        if np.isin(11, actives):
-            self.Chnl11.set(1)
-        else:
-            self.Chnl11.set(0)
 
-        
+        for i in range(12):
+            self.ChnlVal[i].set(np.round(channel_array[i],4))
+            if np.isin(i,actives):
+                self.Chnl[i].set(1)
+            else:
+                self.Chnl[i].set(0)
         """
         Sample ADC and TDC with expected
 
